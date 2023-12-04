@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebGL Animation Example</title>
+  <style>
+    body { margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="myCanvas"></canvas>
+
+  <script>
+    // Отримуємо посилання на canvas та створюємо WebGL контекст
+    const canvas = document.getElementById('myCanvas');
+    const gl = canvas.getContext('webgl');
+
+    // Перевірка підтримки WebGL
+    if (!gl) {
+      console.log('Unable to initialize WebGL. Your browser may not support it.');
+    }
+
+    // Вершини трикутника
+    const vertices = [
+      0.0,  1.0,
+     -1.0, -1.0,
+      1.0, -1.0
+    ];
+
+    // Створюємо буфер вершин WebGL
+    const vertexBuffer = gl.createBuffer();
+    // Прив'язуємо буфер до точки входу веб-графічного контексту
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    // Завантажуємо дані вершин в буфер
+    // Використовуємо новий Float32Array для представлення вершин у форматі 32-бітних чисел з плаваючою крапкою
+    // gl.STATIC_DRAW вказує, що дані будуть рідко змінюватись
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+    // Створення та компіляція шейдерів
+    // Шейдери в мові програмування OpenGL ES Shading Language (GLSL), 
+    // яка використовується у WebGL, приймають рядок (стрічку) як вихідну програму. 
+    const vertexShaderSource = `
+      attribute vec2 coordinates;
+      uniform vec2 translation;
+      void main(void) {
+        gl_Position = vec4(coordinates + translation, 0.0, 1.0);
+      }`;
+
+    const fragmentShaderSource = `
+      void main(void) {
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      }`;
+
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, vertexShaderSource);
+    gl.compileShader(vertexShader);
+
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    gl.compileShader(fragmentShader);
+
+    // Створення та використання програми
+    const shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+    gl.useProgram(shaderProgram);
+
+    // Передача вершин в атрибут координат
+    const coord = gl.getAttribLocation(shaderProgram, 'coordinates');
+    gl.vertexAttribPointer(coord, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(coord);
+
+    // Додано uniform для передачі зсуву (translation)
+    const translation = gl.getUniformLocation(shaderProgram, 'translation');
+    
+    // Додамо трохи анцімаії
+    let posX = 0.0;
+    let speed = 0.01;
+
+    function animate() {
+      // Змінюємо позицію по X
+      posX += speed;
+      
+      // Якщо трикутник дійшов до краю, змінюємо напрямок руху
+      if (Math.abs(posX) > 1.0) {
+        speed *= -1;
+      }
+
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      
+      // Передаємо новий зсув до шейдера
+      gl.uniform2f(translation, posX, 0.0);
+
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
